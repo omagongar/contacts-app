@@ -1,11 +1,14 @@
 var express = require('express');
 var bodyparser = require('body-parser');
 var DataStore = require('nedb');
-var Cors = require("cors");
+var Cors = require("cors"); 
 
-var port = 3000;
+var port = (process.env.PORT || 3000);
 var BASE_URL = "/api/v1";
 var filename = __dirname + "/contacts.json";
+ 
+var path = require('path') 
+const CONTACTS_APP_DIR = "contacts-app/dist/contacts-app"; 
 
 var db = new DataStore({
     filename: filename,
@@ -29,6 +32,11 @@ var contacts = [{
 var app = express();
 app.use(bodyparser.json());
 app.use(Cors());
+app.use(express.static(path.join(__dirname, CONTACTS_APP_DIR))); 
+app.get('/', function(req, res) { 
+res.sendFile(path.join(__dirname, CONTACTS_APP_DIR, '/index.html')); 
+}); 
+ 
 
 db.find({}, (err, contacts) => {
     if (err) {
@@ -74,7 +82,7 @@ app.put(BASE_URL + "/contacts/:name", (req, res) => {
     var name = req.params.name;
     var contact = req.body;
     console.log("Contact to update -> " + name);
-
+    console.log("Contact to update -> " + contact);
 
     db.update({
         "name": name
@@ -85,10 +93,10 @@ app.put(BASE_URL + "/contacts/:name", (req, res) => {
         } else {
             if (rowsUpdated > 1) {
                 console.warn("Incosistent database");
-            } else if (numUpdated == 0) {
+            } else if (rowsUpdated == 0) {
                 res.sendStatus(404);
             } else {
-                res.sendStatus(200);
+                res.status(200).send(JSON.stringify(contact));
             }
         }
     });
@@ -97,9 +105,10 @@ app.put(BASE_URL + "/contacts/:name", (req, res) => {
 
 
 app.post(BASE_URL + "/contacts", (req, res) => {
+    console.log("Adding new contact");
     var contact = req.body;
     db.insert(contact);
-    res.sendStatus(201);
+    res.status(201).send(JSON.stringify('Created'));
 });
 
 app.delete(BASE_URL + "/contacts", (req, res) => {
@@ -123,7 +132,7 @@ app.delete(BASE_URL + "/contacts/:name", (req, res) => {
             if (rowsDeleted > 1) {
                 console.log("incosistence db ");
             } else {
-                res.sendStatus(200);
+                res.status(200).send(JSON.stringify('Deleted'));
             }
         }
     });
